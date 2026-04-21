@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lung Cancer Detection System</title>
+  <style>
+    :root {
+      --primary:   #7C3AED;
+      --primary-l: #9F67FF;
+      --danger:    #EF4444;
+      --success:   #10B981;
+      --warning:   #F59E0B;
+      --dark:      #0F172A;
+      --card:      #1E293B;
+      --border:    #334155;
+      --text:      #E2E8F0;
+      --muted:     #94A3B8;
+      --input-bg:  #0F172A;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: var(--dark); color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-size: 1.8rem; }
+    .header-text h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .header-text p  { font-size: 0.8rem; color: var(--muted); }
+    .model-badge {
+      margin-left: auto; background: rgba(124,58,237,0.2);
+      border: 1px solid var(--primary-l); border-radius: 99px;
+      padding: 0.35rem 1rem; font-size: 0.78rem; color: var(--primary-l);
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    main {
+      max-width: 1100px; margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem;
+    }
+    @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+
+    /* ── Card ───────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.75rem;
+    }
+    .card-title {
+      font-size: 1rem; font-weight: 700; color: #fff;
+      margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .card-title span { font-size: 1.2rem; }
+
+    /* ── Section grid ───────────────────────────────────────────────── */
+    .section-title {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--primary-l);
+      margin: 1.2rem 0 0.75rem;
+    }
+    .field-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+      gap: 0.75rem;
+    }
+    .field-group label {
+      display: block; font-size: 0.78rem; color: var(--muted);
+      margin-bottom: 0.35rem; font-weight: 500;
+    }
+    .field-group select,
+    .field-group input {
+      width: 100%; background: var(--input-bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.55rem 0.85rem; font-size: 0.9rem;
+      transition: border-color .2s;
+      appearance: none; cursor: pointer;
+    }
+    .field-group select:focus,
+    .field-group input:focus {
+      outline: none; border-color: var(--primary-l);
+      box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+    }
+
+    /* ── Submit btn ─────────────────────────────────────────────────── */
+    .btn-predict {
+      width: 100%; margin-top: 1.5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, #9F67FF 100%);
+      color: #fff; border: none; border-radius: 10px;
+      padding: 0.9rem; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn-predict:hover  { opacity: .92; }
+    .btn-predict:active { transform: scale(0.98); }
+
+    /* ── Sidebar / Result ───────────────────────────────────────────── */
+    .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* Result card */
+    .result-card {
+      border-radius: 16px; padding: 1.75rem;
+      border: 2px solid var(--border);
+      background: var(--card); position: relative; overflow: hidden;
+      transition: border-color .3s;
+    }
+    .result-card.high { border-color: var(--danger); }
+    .result-card.low  { border-color: var(--success); }
+    .result-card .glow {
+      position: absolute; top: -40px; right: -40px;
+      width: 150px; height: 150px; border-radius: 50%;
+      filter: blur(60px); opacity: 0.25;
+    }
+    .result-card.high .glow { background: var(--danger); }
+    .result-card.low  .glow { background: var(--success); }
+
+    .result-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .result-label {
+      font-size: 1.25rem; font-weight: 800; margin-bottom: 0.25rem;
+    }
+    .result-card.high .result-label { color: var(--danger); }
+    .result-card.low  .result-label { color: var(--success); }
+    .confidence-text { font-size: 0.85rem; color: var(--muted); }
+
+    /* Progress bars */
+    .prob-row { margin-top: 1.2rem; }
+    .prob-label {
+      display: flex; justify-content: space-between;
+      font-size: 0.8rem; margin-bottom: 0.4rem; color: var(--muted);
+    }
+    .prob-bar { height: 8px; border-radius: 99px; background: #1E293B; }
+    .prob-fill {
+      height: 100%; border-radius: 99px;
+      transition: width .7s cubic-bezier(.4,0,.2,1);
+    }
+    .prob-fill.cancer { background: linear-gradient(90deg, var(--warning), var(--danger)); }
+    .prob-fill.no-cancer { background: linear-gradient(90deg, #34D399, var(--success)); }
+
+    /* Factors */
+    .factors-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .factor-tag {
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+      color: #FCA5A5; border-radius: 99px; padding: 0.25rem 0.75rem; font-size: 0.75rem;
+    }
+
+    /* Stats card */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .stat-item {
+      background: var(--input-bg); border-radius: 10px; padding: 0.85rem;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--primary-l); }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+
+    /* Disclaimer */
+    .disclaimer {
+      background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px; padding: 0.9rem 1rem; font-size: 0.78rem; color: #FCD34D;
+      display: flex; gap: 0.6rem; align-items: flex-start;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: none; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Idle placeholder */
+    .idle-placeholder {
+      text-align: center; padding: 2rem; color: var(--muted);
+    }
+    .idle-placeholder .idle-icon { font-size: 3rem; margin-bottom: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">🫁</div>
+  <div class="header-text">
+    <h1>Lung Cancer Detection System</h1>
+    <p>AI-powered risk assessment using clinical symptoms</p>
+  </div>
+  <div class="model-badge">
+    Model: {{ model_name }} &nbsp;|&nbsp; Accuracy: {{ accuracy }}
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left: Input form -->
+  <div class="card">
+    <div class="card-title"><span>📋</span> Patient Symptom Input</div>
+
+    <div class="section-title">Demographics</div>
+    <div class="field-grid">
+      <div class="field-group">
+        <label>Gender</label>
+        <select id="GENDER">
+          <option value="1">Male</option>
+          <option value="2">Female</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Age</label>
+        <input type="number" id="AGE" value="55" min="18" max="100"/>
+      </div>
+      <div class="field-group">
+        <label>Smoking</label>
+        <select id="SMOKING">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Yellow Fingers</label>
+        <select id="YELLOW_FINGERS">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">Psychological & Social Factors</div>
+    <div class="field-grid">
+      <div class="field-group">
+        <label>Anxiety</label>
+        <select id="ANXIETY">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Peer Pressure</label>
+        <select id="PEER_PRESSURE">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Alcohol Consuming</label>
+        <select id="ALCOHOL_CONSUMING">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">Physical Symptoms</div>
+    <div class="field-grid">
+      <div class="field-group">
+        <label>Chronic Disease</label>
+        <select id="CHRONIC_DISEASE">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Fatigue</label>
+        <select id="FATIGUE">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Allergy</label>
+        <select id="ALLERGY">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Wheezing</label>
+        <select id="WHEEZING">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Coughing</label>
+        <select id="COUGHING">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Shortness of Breath</label>
+        <select id="SHORTNESS_OF_BREATH">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Swallowing Difficulty</label>
+        <select id="SWALLOWING_DIFFICULTY">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Chest Pain</label>
+        <select id="CHEST_PAIN">
+          <option value="1">No</option>
+          <option value="2">Yes</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-predict" onclick="predict()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">🔍 Analyze Risk</span>
+    </button>
+  </div>
+
+  <!-- Right: Sidebar -->
+  <div class="sidebar">
+
+    <!-- Result card -->
+    <div class="result-card" id="result-card">
+      <div id="result-idle" class="idle-placeholder">
+        <div class="idle-icon">🫁</div>
+        <p>Fill in the patient symptoms and click <strong>Analyze Risk</strong> to get a prediction.</p>
+      </div>
+      <div id="result-content" style="display:none">
+        <div class="glow"></div>
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-label" id="result-label"></div>
+        <div class="confidence-text" id="confidence-text"></div>
+
+        <div class="prob-row">
+          <div class="prob-label"><span>Lung Cancer Risk</span><span id="pct-cancer"></span></div>
+          <div class="prob-bar"><div class="prob-fill cancer" id="bar-cancer" style="width:0%"></div></div>
+        </div>
+        <div class="prob-row" style="margin-top:.6rem">
+          <div class="prob-label"><span>No Cancer</span><span id="pct-no-cancer"></span></div>
+          <div class="prob-bar"><div class="prob-fill no-cancer" id="bar-no-cancer" style="width:0%"></div></div>
+        </div>
+
+        <div id="factors-section" style="margin-top:1.2rem;display:none">
+          <div style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem">Key Risk Factors Present:</div>
+          <div class="factors-list" id="factors-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Model stats -->
+    <div class="card">
+      <div class="card-title"><span>📊</span> Model Performance</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">{{ accuracy }}</div>
+          <div class="stat-label">Test Accuracy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">0.991</div>
+          <div class="stat-label">ROC-AUC</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">0.948</div>
+          <div class="stat-label">F1 Score</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ model_name }}</div>
+          <div class="stat-label">Algorithm</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer">
+      <span>⚠️</span>
+      <span>This tool is for <strong>screening purposes only</strong> and does not replace professional medical diagnosis. Always consult a qualified physician.</span>
+    </div>
+
+  </div>
+</main>
+
+<script>
+async function predict() {
+  const fields = ["GENDER","AGE","SMOKING","YELLOW_FINGERS","ANXIETY","PEER_PRESSURE",
+                  "CHRONIC_DISEASE","FATIGUE","ALLERGY","WHEEZING","ALCOHOL_CONSUMING",
+                  "COUGHING","SHORTNESS_OF_BREATH","SWALLOWING_DIFFICULTY","CHEST_PAIN"];
+
+  const payload = {};
+  for (const f of fields) {
+    const el = document.getElementById(f);
+    payload[f] = parseFloat(el.value);
+  }
+
+  // Loading state
+  document.getElementById("spinner").style.display = "block";
+  document.getElementById("btn-text").textContent = "Analyzing…";
+  document.querySelector(".btn-predict").disabled = true;
+
+  try {
+    const res  = await fetch("/predict", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (data.error) { alert("Error: " + data.error); return; }
+
+    // Show result
+    const card = document.getElementById("result-card");
+    card.className = "result-card " + data.risk_level;
+    document.getElementById("result-idle").style.display    = "none";
+    document.getElementById("result-content").style.display = "block";
+
+    document.getElementById("result-icon").textContent =
+      data.risk_level === "high" ? "🚨" : "✅";
+    document.getElementById("result-label").textContent  = data.risk_label;
+    document.getElementById("confidence-text").textContent =
+      `Confidence: ${data.confidence.toFixed(1)}%`;
+
+    document.getElementById("pct-cancer").textContent    = data.probability_cancer + "%";
+    document.getElementById("pct-no-cancer").textContent = data.probability_no_cancer + "%";
+
+    // Animate bars after short delay
+    setTimeout(() => {
+      document.getElementById("bar-cancer").style.width   = data.probability_cancer + "%";
+      document.getElementById("bar-no-cancer").style.width= data.probability_no_cancer + "%";
+    }, 50);
+
+    // Risk factors
+    if (data.key_factors && data.key_factors.length > 0) {
+      const section = document.getElementById("factors-section");
+      const list    = document.getElementById("factors-list");
+      section.style.display = "block";
+      list.innerHTML = data.key_factors
+        .map(f => `<span class="factor-tag">${f}</span>`).join("");
+    }
+
+  } catch(e) {
+    alert("Request failed: " + e);
+  } finally {
+    document.getElementById("spinner").style.display = "none";
+    document.getElementById("btn-text").textContent  = "🔍 Analyze Risk";
+    document.querySelector(".btn-predict").disabled  = false;
+  }
+}
+</script>
+</body>
+</html>

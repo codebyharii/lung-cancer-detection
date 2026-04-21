@@ -1,0 +1,54 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env/
+.env
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code / IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment / secrets
+.env.local
+.env.production
+
+# Trained ML models
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+
+# Large datasets
+data/*.csv
+data/*.xlsx
+data/*.zip
+
+# Generated plots / results
+plots/*.png
+plots/*.jpg
+plots/*.jpeg
+plots/*.csv
+
+# Temporary files
+*.tmp
+*.bak
+
+# Keep folders in git even if empty
+!models/.gitkeep
+!data/.gitkeep
+!plots/.gitkeep
